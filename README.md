@@ -1,4 +1,6 @@
-# Booking System
+<p align="center">
+  <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSFOpjBRhjnId1ZjM60DLgEl7U_kNGwvJ3NfA&s" height="150" alt="Go logo" />
+</p>
 
 This is a booking system API written in Go and Fiber. It uses Postgres as the database and Redis as the cache layer.
 
