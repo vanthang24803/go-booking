@@ -15,6 +15,7 @@ type TokenStorage interface {
 	Update(token *domain.Token) (*domain.Token, error)
 	Remove(id int) error
 	FindOneByToken(token string, userId int) (*domain.Token, error)
+	FindOneByValue(value string) (*domain.Token, error)
 }
 
 type TokenRepository struct {
@@ -24,6 +25,34 @@ type TokenRepository struct {
 
 func NewTokenRepository(db *sqlx.DB, ctx context.Context) *TokenRepository {
 	return &TokenRepository{db: db, ctx: ctx}
+}
+
+func (r *TokenRepository) FindOneByValue(value string) (*domain.Token, error) {
+	query := `
+        SELECT id, user_id, token, name, created_at, updated_at, expired_at
+        FROM tokens
+        WHERE token = $1
+    `
+
+	var t domain.Token
+	err := r.db.QueryRowContext(r.ctx, query, value).Scan(
+		&t.ID,
+		&t.UserID,
+		&t.Token,
+		&t.Name,
+		&t.CreatedAt,
+		&t.UpdatedAt,
+		&t.ExpiredAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("error querying token: %w", err)
+	}
+
+	return &t, nil
 }
 
 func (r *TokenRepository) FindOneByToken(tokenName string, userId int) (*domain.Token, error) {

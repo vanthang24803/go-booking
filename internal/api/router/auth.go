@@ -61,10 +61,27 @@ func (r *AuthRoutes) login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(utils.NewResponse(fiber.StatusOK, result))
 }
 
+func (r *AuthRoutes) verifyEmail(c *fiber.Ctx) error {
+
+	token := c.Query("token")
+
+	if token == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(utils.NewAppError(400, "Invalid token"))
+	}
+
+	err := r.service.VerifyEmailHandler(token)
+
+	if err != nil {
+		return c.Status(err.Code).JSON(err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(utils.NewAppError(200, "Confirm account successfully!"))
+}
+
 func AuthRouter(router fiber.Router) {
 	routes := NewAuthRoutes()
 
 	router.Post("/auth/register", routes.register)
 	router.Post("/auth/login", routes.login)
-
+	router.Get("/auth/confirm-account", routes.verifyEmail)
 }

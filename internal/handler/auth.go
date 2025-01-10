@@ -11,18 +11,21 @@ import (
 	"github.com/may20xx/booking/internal/storage"
 	"github.com/may20xx/booking/internal/utils"
 	"github.com/may20xx/booking/pkg/log"
+	"github.com/may20xx/booking/pkg/mail"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler interface {
 	RegisterHandler(request *dto.RegisterRequest) (*domain.User, *utils.AppError)
 	LoginHandler(request *dto.LoginRequest) (*utils.TokenResponse, *utils.AppError)
+	VerifyEmailHandler(token string) *utils.AppError
 }
 
 type AuthService struct {
 	userRepo  storage.UserStorage
 	tokenRepo storage.TokenStorage
 	roleRepo  storage.RoleStorage
+	mail      mail.Mail
 }
 
 func NewAuthService() *AuthService {
@@ -37,6 +40,7 @@ func NewAuthService() *AuthService {
 		userRepo:  storage.NewUserRepository(db, ctx),
 		tokenRepo: storage.NewTokenRepository(db, ctx),
 		roleRepo:  storage.NewRoleRepository(db, ctx),
+		mail:      mail.NewMailService(),
 	}
 }
 
@@ -79,7 +83,81 @@ func (s *AuthService) RegisterHandler(request *dto.RegisterRequest) (*domain.Use
 		return nil, utils.NewAppError(500, err.Error())
 	}
 
+	token, err := utils.GenerateJWT(result)
+
+	if err != nil {
+		return nil, utils.NewAppError(400, "Error generating JWT")
+	}
+
+	err = s.mail.SendMailConfirmAccount(result.Email, token.AccessToken)
+
+	if err != nil {
+		return nil, utils.NewAppError(500, "Mail send failed")
+	}
+
+	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+
+	verifyToken := &domain.Token{
+		UserID:    user.ID,
+		Name:      dto.RefreshToken,
+		Token:     token.AccessToken,
+		ExpiredAt: &expirationTime,
+	}
+
+	_, err = s.tokenRepo.Insert(verifyToken)
+
+	if err != nil {
+		return nil, utils.NewAppError(500, "Error saving refresh token")
+	}
+
 	return result, nil
+}
+
+func (s *AuthService) VerifyEmailHandler(token string) *utils.AppError {
+
+	existingToken, err := s.tokenRepo.FindOneByValue(token)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return utils.NewAppError(404, "Token not found")
+		}
+		return utils.NewAppError(500, "Internal server error")
+	}
+
+	if existingToken.ExpiredAt != nil && existingToken.ExpiredAt.Before(time.Now()) {
+		return utils.NewAppError(401, "Token expired")
+	}
+
+	payload, err := utils.ValidateJWT(existingToken.Token)
+
+	if err != nil {
+		return utils.NewAppError(401, "Invalid token")
+	}
+
+	account, err := s.userRepo.FindOneById(payload.Sub)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return utils.NewAppError(404, "User not found")
+		}
+		return utils.NewAppError(500, "Internal server error")
+	}
+
+	account.EmailVerify = true
+
+	_, err = s.userRepo.Update(account)
+
+	if err != nil {
+		return utils.NewAppError(500, "Error updating account")
+	}
+
+	err = s.tokenRepo.Remove(existingToken.ID)
+
+	if err != nil {
+		return utils.NewAppError(500, "Error removing token")
+	}
+
+	return nil
 }
 
 func (s *AuthService) LoginHandler(request *dto.LoginRequest) (*utils.TokenResponse, *utils.AppError) {
@@ -94,6 +172,12 @@ func (s *AuthService) LoginHandler(request *dto.LoginRequest) (*utils.TokenRespo
 	err = bcrypt.CompareHashAndPassword([]byte(user.HashPassword), []byte(request.Password))
 	if err != nil {
 		return nil, utils.NewAppError(401, "Username or password is incorrect")
+	}
+
+	log.Msg.Debug(user.EmailVerify)
+
+	if !user.EmailVerify {
+		return nil, utils.NewAppError(401, "Email not verified")
 	}
 
 	roles, _ := s.roleRepo.FindRolesByUser(user.ID)

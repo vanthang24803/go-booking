@@ -15,6 +15,7 @@ import (
 )
 
 type MeHandler interface {
+	Logout(payload *utils.JwtPayload) *utils.AppError
 	GetProfile(payload *utils.JwtPayload) (*domain.User, *utils.AppError)
 	UploadAvatar(payload *utils.JwtPayload, file multipart.File) (*domain.User, *utils.AppError)
 	UpdateProfile(payload *utils.JwtPayload, req *dto.UpdateProfileRequest) (*domain.User, *utils.AppError)
@@ -23,6 +24,7 @@ type MeHandler interface {
 type MeService struct {
 	userRepo   storage.UserStorage
 	roleRepo   storage.RoleStorage
+	tokenRepo  storage.TokenStorage
 	cloudinary cloudinary.Cloudinary
 }
 
@@ -44,8 +46,24 @@ func NewMeService() *MeService {
 	return &MeService{
 		userRepo:   storage.NewUserRepository(db, ctx),
 		roleRepo:   storage.NewRoleRepository(db, ctx),
+		tokenRepo:  storage.NewTokenRepository(db, ctx),
 		cloudinary: upload,
 	}
+}
+
+func (s *MeService) Logout(payload *utils.JwtPayload) *utils.AppError {
+
+	token, _ := s.tokenRepo.FindOneByToken(dto.RefreshToken, payload.Sub)
+
+	if token != nil {
+		err := s.tokenRepo.Remove(token.ID)
+
+		if err != nil {
+			return utils.NewAppError(500, err.Error())
+		}
+	}
+
+	return nil
 }
 
 func (s *MeService) GetProfile(payload *utils.JwtPayload) (*domain.User, *utils.AppError) {

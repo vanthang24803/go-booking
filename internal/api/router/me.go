@@ -89,11 +89,28 @@ func (r *MeRoutes) updateProfile(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(utils.NewResponse(fiber.StatusOK, res))
 }
 
+func (r *MeRoutes) logout(c *fiber.Ctx) error {
+	payload, ok := c.Locals("user").(*utils.JwtPayload)
+
+	if !ok || payload == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(utils.NewAppError(401, "Unauthorized"))
+	}
+
+	err := r.service.Logout(payload)
+
+	if err != nil {
+		return c.Status(err.Code).JSON(err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(utils.NewAppError(fiber.StatusOK, "Logout successfully"))
+}
+
 func MeRouter(router fiber.Router) {
 	routes := NewMeRoutes()
 
 	router.Get("/me", guard.AuthGuard(), routes.profile)
 	router.Post("/me/avatar", guard.AuthGuard(), routes.uploadAvatar)
 	router.Put("/me", guard.AuthGuard(), routes.updateProfile)
+	router.Post("/me/logout", guard.AuthGuard(), routes.logout)
 
 }

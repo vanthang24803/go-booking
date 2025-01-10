@@ -1,8 +1,9 @@
 package dto
 
 const (
-	AccessToken  = "access_token"
-	RefreshToken = "refresh_token"
+	AccessToken        = "access_token"
+	RefreshToken       = "refresh_token"
+	ConfirmAccessToken = "confirm_access_token"
 
 	User    = "user"
 	Admin   = "admin"

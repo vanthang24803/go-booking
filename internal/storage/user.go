@@ -60,8 +60,8 @@ func (r *UserRepository) Insert(user *domain.User) (*domain.User, error) {
 func (r *UserRepository) Update(user *domain.User) (*domain.User, error) {
 	query := `
 		UPDATE users
-		SET username = $1, email = $2, hash_password = $3, first_name = $4, surname = $5, avatar = $6, updated_at = $7
-		WHERE id = $8
+		SET username = $1, email = $2, hash_password = $3, first_name = $4, surname = $5, avatar = $6, updated_at = $7, email_verify = $8  
+		WHERE id = $9
 		RETURNING id, created_at, updated_at
 	`
 
@@ -76,6 +76,7 @@ func (r *UserRepository) Update(user *domain.User) (*domain.User, error) {
 		user.Surname,
 		user.Avatar,
 		user.UpdatedAt,
+		user.EmailVerify,
 		user.ID,
 	).Scan(&user.ID, &user.CreatedAt, &user.UpdatedAt)
 
@@ -103,7 +104,7 @@ func (r *UserRepository) Remove(id int) error {
 
 func (r *UserRepository) FindOneByEmail(email string) (*domain.User, error) {
 	query := `
-		SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at
+		SELECT id, username, email_verify, email, hash_password, first_name, surname, avatar, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -123,7 +124,7 @@ func (r *UserRepository) FindOneByEmail(email string) (*domain.User, error) {
 
 func (r *UserRepository) FindOneByUsername(username string) (*domain.User, error) {
 	query := `
-		SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at
+		SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at , email_verify
 		FROM users
 		WHERE username = $1
 	`
@@ -143,7 +144,7 @@ func (r *UserRepository) FindOneByUsername(username string) (*domain.User, error
 
 func (r *UserRepository) FindOneById(id int) (*domain.User, error) {
 	query := `
-        SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at
+        SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at , email_verify
         FROM users
         WHERE id = $1
     `

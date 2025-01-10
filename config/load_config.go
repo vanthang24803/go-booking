@@ -22,6 +22,11 @@ type Config struct {
 	CloudinaryCloudName string
 	CloudinaryAPIKey    string
 	CloudinaryAPISecret string
+
+	MailHost string
+	MailPort int
+	MailUser string
+	MailPass string
 }
 
 var config *Config
@@ -47,6 +52,10 @@ func loadConfig() *Config {
 		CloudinaryCloudName: getEnvMustExist("CLOUDINARY_CLOUD_NAME"),
 		CloudinaryAPIKey:    getEnvMustExist("CLOUDINARY_API_KEY"),
 		CloudinaryAPISecret: getEnvMustExist("CLOUDINARY_API_SECRET"),
+		MailHost:            getEnvMustExist("MAIL_HOST"),
+		MailPort:            587,
+		MailUser:            getEnvMustExist("MAIL_USER"),
+		MailPass:            getEnvMustExist("MAIL_PASS"),
 	}
 }
 

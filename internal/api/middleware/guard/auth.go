@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/may20xx/booking/internal/utils"
+	"github.com/samber/lo"
 )
 
 func AuthGuard() fiber.Handler {
@@ -27,6 +28,27 @@ func AuthGuard() fiber.Handler {
 		}
 
 		c.Locals("user", payload)
+
+		return c.Next()
+	}
+}
+
+func AuthorizeRoles(requiredRoles ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+
+		user, ok := c.Locals("user").(*utils.JwtPayload)
+
+		if !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(utils.NewAppError(401, "Unauthorized"))
+		}
+
+		hasRequiredRole := lo.SomeBy(user.Roles, func(role string) bool {
+			return lo.Contains(requiredRoles, role)
+		})
+
+		if !hasRequiredRole {
+			return c.Status(fiber.StatusForbidden).JSON(utils.NewAppError(403, "Access denied"))
+		}
 
 		return c.Next()
 	}
