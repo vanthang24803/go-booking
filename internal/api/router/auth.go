@@ -9,19 +9,19 @@ import (
 	"github.com/may20xx/booking/internal/utils"
 )
 
-type AuthRoutes struct {
+type authRouter struct {
 	validate *validator.Validate
-	service  handler.AuthHandler
+	service  handler.AuthService
 }
 
-func NewAuthRoutes() *AuthRoutes {
-	return &AuthRoutes{
+func newAuthRouter() *authRouter {
+	return &authRouter{
 		validate: validator.New(),
 		service:  handler.NewAuthService(),
 	}
 }
 
-func (r *AuthRoutes) register(c *fiber.Ctx) error {
+func (r *authRouter) register(c *fiber.Ctx) error {
 	req := new(dto.RegisterRequest)
 
 	if err := c.BodyParser(req); err != nil {
@@ -41,7 +41,7 @@ func (r *AuthRoutes) register(c *fiber.Ctx) error {
 	return c.JSON(utils.NewResponse(fiber.StatusCreated, result))
 }
 
-func (r *AuthRoutes) login(c *fiber.Ctx) error {
+func (r *authRouter) login(c *fiber.Ctx) error {
 	req := new(dto.LoginRequest)
 
 	if err := c.BodyParser(req); err != nil {
@@ -61,7 +61,7 @@ func (r *AuthRoutes) login(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(utils.NewResponse(fiber.StatusOK, result))
 }
 
-func (r *AuthRoutes) verifyEmail(c *fiber.Ctx) error {
+func (r *authRouter) verifyEmail(c *fiber.Ctx) error {
 
 	token := c.Query("token")
 
@@ -79,7 +79,7 @@ func (r *AuthRoutes) verifyEmail(c *fiber.Ctx) error {
 }
 
 func AuthRouter(router fiber.Router) {
-	routes := NewAuthRoutes()
+	routes := newAuthRouter()
 
 	router.Post("/auth/register", routes.register)
 	router.Post("/auth/login", routes.login)

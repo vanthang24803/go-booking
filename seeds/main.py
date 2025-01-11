@@ -107,9 +107,51 @@ def seed_users(conn, users):
         conn.rollback()
 
 
+def seed_catalogs(conn):
+    catalogs = [
+        "Rooms",
+        "Icons",
+        "Countryside",
+        "Amazing views",
+        "Islands",
+        "Play",
+        "Hanoks",
+        "Creative spaces",
+        "Tiny home",
+        "Mansions",
+        "Ski-in/out",
+        "Beachfront",
+        "National parks",
+        "Trending",
+        "Windmills",
+        "Cabins",
+        "Top cities",
+        "Tree houses",
+        "Camping",
+        "New",
+        "Lake",
+        "Container"
+    ]
+    try:
+        cursor = conn.cursor()
+        values = ", ".join([f"('{name}')" for name in catalogs])
+        
+        query = f"""
+        INSERT INTO catalogs (name)
+        VALUES {values}
+        """
+        
+        cursor.execute(query)
+        conn.commit()
+        
+        logging.info("Seeded catalogs successfully! ✅")
+    except Exception as e:
+        logging.error(f"Error seeding catalogs: {e}")
+
 def main():
     conn = connect_db()
     if conn:
+        # seed_catalogs(conn)
         conn.close()
 
 

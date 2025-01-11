@@ -14,21 +14,21 @@ import (
 	"github.com/may20xx/booking/pkg/log"
 )
 
-type MeHandler interface {
+type MeService interface {
 	Logout(payload *utils.JwtPayload) *utils.AppError
 	GetProfile(payload *utils.JwtPayload) (*domain.User, *utils.AppError)
 	UploadAvatar(payload *utils.JwtPayload, file multipart.File) (*domain.User, *utils.AppError)
 	UpdateProfile(payload *utils.JwtPayload, req *dto.UpdateProfileRequest) (*domain.User, *utils.AppError)
 }
 
-type MeService struct {
+type meService struct {
 	userRepo   storage.UserStorage
 	roleRepo   storage.RoleStorage
 	tokenRepo  storage.TokenStorage
 	cloudinary cloudinary.Cloudinary
 }
 
-func NewMeService() *MeService {
+func NewMeService() *meService {
 	ctx := context.Background()
 
 	db, err := database.GetDatabase(ctx)
@@ -43,7 +43,7 @@ func NewMeService() *MeService {
 		log.Msg.DPanicf("error creating cloudinary service: %s", err.Error())
 	}
 
-	return &MeService{
+	return &meService{
 		userRepo:   storage.NewUserRepository(db, ctx),
 		roleRepo:   storage.NewRoleRepository(db, ctx),
 		tokenRepo:  storage.NewTokenRepository(db, ctx),
@@ -51,7 +51,7 @@ func NewMeService() *MeService {
 	}
 }
 
-func (s *MeService) Logout(payload *utils.JwtPayload) *utils.AppError {
+func (s *meService) Logout(payload *utils.JwtPayload) *utils.AppError {
 
 	token, _ := s.tokenRepo.FindOneByToken(dto.RefreshToken, payload.Sub)
 
@@ -66,7 +66,7 @@ func (s *MeService) Logout(payload *utils.JwtPayload) *utils.AppError {
 	return nil
 }
 
-func (s *MeService) GetProfile(payload *utils.JwtPayload) (*domain.User, *utils.AppError) {
+func (s *meService) GetProfile(payload *utils.JwtPayload) (*domain.User, *utils.AppError) {
 	user, err := s.userRepo.FindOneById(payload.Sub)
 
 	if err != nil {
@@ -83,7 +83,7 @@ func (s *MeService) GetProfile(payload *utils.JwtPayload) (*domain.User, *utils.
 	return user, nil
 }
 
-func (s *MeService) UploadAvatar(payload *utils.JwtPayload, file multipart.File) (*domain.User, *utils.AppError) {
+func (s *meService) UploadAvatar(payload *utils.JwtPayload, file multipart.File) (*domain.User, *utils.AppError) {
 	user, err := s.userRepo.FindOneById(payload.Sub)
 
 	if err != nil {
@@ -110,7 +110,7 @@ func (s *MeService) UploadAvatar(payload *utils.JwtPayload, file multipart.File)
 	return user, nil
 }
 
-func (s *MeService) UpdateProfile(payload *utils.JwtPayload, req *dto.UpdateProfileRequest) (*domain.User, *utils.AppError) {
+func (s *meService) UpdateProfile(payload *utils.JwtPayload, req *dto.UpdateProfileRequest) (*domain.User, *utils.AppError) {
 	user, err := s.userRepo.FindOneById(payload.Sub)
 
 	if err != nil {

@@ -10,19 +10,19 @@ import (
 	"github.com/may20xx/booking/internal/utils"
 )
 
-type MeRoutes struct {
+type meRouter struct {
 	validate *validator.Validate
-	service  handler.MeHandler
+	service  handler.MeService
 }
 
-func NewMeRoutes() *MeRoutes {
-	return &MeRoutes{
+func newMeRouter() *meRouter {
+	return &meRouter{
 		validate: validator.New(),
 		service:  handler.NewMeService(),
 	}
 }
 
-func (r *MeRoutes) profile(c *fiber.Ctx) error {
+func (r *meRouter) profile(c *fiber.Ctx) error {
 	payload, ok := c.Locals("user").(*utils.JwtPayload)
 	if !ok || payload == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(utils.NewAppError(401, "Unauthorized"))
@@ -37,7 +37,7 @@ func (r *MeRoutes) profile(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(utils.NewResponse(fiber.StatusOK, result))
 }
 
-func (r *MeRoutes) uploadAvatar(c *fiber.Ctx) error {
+func (r *meRouter) uploadAvatar(c *fiber.Ctx) error {
 	payload, ok := c.Locals("user").(*utils.JwtPayload)
 	if !ok || payload == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(utils.NewAppError(401, "Unauthorized"))
@@ -63,7 +63,7 @@ func (r *MeRoutes) uploadAvatar(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(utils.NewResponse(fiber.StatusOK, res))
 }
 
-func (r *MeRoutes) updateProfile(c *fiber.Ctx) error {
+func (r *meRouter) updateProfile(c *fiber.Ctx) error {
 	payload, ok := c.Locals("user").(*utils.JwtPayload)
 
 	if !ok || payload == nil {
@@ -89,7 +89,7 @@ func (r *MeRoutes) updateProfile(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(utils.NewResponse(fiber.StatusOK, res))
 }
 
-func (r *MeRoutes) logout(c *fiber.Ctx) error {
+func (r *meRouter) logout(c *fiber.Ctx) error {
 	payload, ok := c.Locals("user").(*utils.JwtPayload)
 
 	if !ok || payload == nil {
@@ -106,7 +106,7 @@ func (r *MeRoutes) logout(c *fiber.Ctx) error {
 }
 
 func MeRouter(router fiber.Router) {
-	routes := NewMeRoutes()
+	routes := newMeRouter()
 
 	router.Get("/me", guard.AuthGuard(), routes.profile)
 	router.Post("/me/avatar", guard.AuthGuard(), routes.uploadAvatar)

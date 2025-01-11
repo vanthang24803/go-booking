@@ -15,20 +15,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthHandler interface {
+type AuthService interface {
 	RegisterHandler(request *dto.RegisterRequest) (*domain.User, *utils.AppError)
 	LoginHandler(request *dto.LoginRequest) (*utils.TokenResponse, *utils.AppError)
 	VerifyEmailHandler(token string) *utils.AppError
 }
 
-type AuthService struct {
+type authService struct {
 	userRepo  storage.UserStorage
 	tokenRepo storage.TokenStorage
 	roleRepo  storage.RoleStorage
 	mail      mail.Mail
 }
 
-func NewAuthService() *AuthService {
+func NewAuthService() *authService {
 	ctx := context.Background()
 
 	db, err := database.GetDatabase(ctx)
@@ -36,7 +36,7 @@ func NewAuthService() *AuthService {
 		log.Msg.Panic("error getting database connection %s", err)
 	}
 
-	return &AuthService{
+	return &authService{
 		userRepo:  storage.NewUserRepository(db, ctx),
 		tokenRepo: storage.NewTokenRepository(db, ctx),
 		roleRepo:  storage.NewRoleRepository(db, ctx),
@@ -44,7 +44,7 @@ func NewAuthService() *AuthService {
 	}
 }
 
-func (s *AuthService) RegisterHandler(request *dto.RegisterRequest) (*domain.User, *utils.AppError) {
+func (s *authService) RegisterHandler(request *dto.RegisterRequest) (*domain.User, *utils.AppError) {
 	existingUser, _ := s.userRepo.FindOneByEmail(request.Email)
 
 	if existingUser != nil {
@@ -113,7 +113,7 @@ func (s *AuthService) RegisterHandler(request *dto.RegisterRequest) (*domain.Use
 	return result, nil
 }
 
-func (s *AuthService) VerifyEmailHandler(token string) *utils.AppError {
+func (s *authService) VerifyEmailHandler(token string) *utils.AppError {
 
 	existingToken, err := s.tokenRepo.FindOneByValue(token)
 
@@ -160,7 +160,7 @@ func (s *AuthService) VerifyEmailHandler(token string) *utils.AppError {
 	return nil
 }
 
-func (s *AuthService) LoginHandler(request *dto.LoginRequest) (*utils.TokenResponse, *utils.AppError) {
+func (s *authService) LoginHandler(request *dto.LoginRequest) (*utils.TokenResponse, *utils.AppError) {
 	user, err := s.userRepo.FindOneByUsername(request.Username)
 	if err != nil {
 		if err == sql.ErrNoRows {
