@@ -74,6 +74,23 @@ def seed_user_roles(conn, start_user_id, end_user_id, role_id):
         logging.error(f"Error seeding user_roles: {e}")
         conn.rollback()
 
+def active_account(conn, start_user_id, end_user_id):
+    try:
+        cursor = conn.cursor()
+        query = """
+        UPDATE users
+        SET email_verify = true
+        WHERE id >= %s AND id <= %s
+        """
+        cursor.execute(query, (start_user_id, end_user_id))
+        conn.commit()
+        logging.info(
+            f"Seeded active account for user_id {start_user_id} -> {end_user_id}  successfully! ✅"
+        )
+    except Exception as e:
+        logging.error(f"Error seeding user_roles: {e}")
+        conn.rollback()
+
 
 def seed_users(conn, users):
     try:
@@ -93,9 +110,6 @@ def seed_users(conn, users):
 def main():
     conn = connect_db()
     if conn:
-        users = generate_random_users(180)
-        seed_users(conn, users)
-
         conn.close()
 
 

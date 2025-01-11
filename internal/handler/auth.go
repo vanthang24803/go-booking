@@ -145,7 +145,7 @@ func (s *AuthService) VerifyEmailHandler(token string) *utils.AppError {
 
 	account.EmailVerify = true
 
-	_, err = s.userRepo.Update(account)
+	_, err = s.userRepo.VerifyEmail(account)
 
 	if err != nil {
 		return utils.NewAppError(500, "Error updating account")
