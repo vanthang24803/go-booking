@@ -26,5 +26,6 @@ func InitRouter(router fiber.Router) {
 		AuthRouter,
 		MeRouter,
 		CatalogRouter,
+		ListingRouter,
 	)
 }

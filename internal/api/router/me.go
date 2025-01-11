@@ -8,6 +8,7 @@ import (
 	"github.com/may20xx/booking/internal/api/middleware/guard"
 	"github.com/may20xx/booking/internal/handler"
 	"github.com/may20xx/booking/internal/utils"
+	"github.com/may20xx/booking/pkg/log"
 )
 
 type meRouter struct {
@@ -54,9 +55,12 @@ func (r *meRouter) uploadAvatar(c *fiber.Ctx) error {
 	}
 	defer file.Close()
 
+	log.Msg.Debug(file)
+
 	res, ext := r.service.UploadAvatar(payload, file)
 
 	if ext != nil {
+		log.Msg.Error(ext.Error())
 		return c.Status(ext.Code).JSON(ext)
 	}
 
