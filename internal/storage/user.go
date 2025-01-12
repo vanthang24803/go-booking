@@ -10,7 +10,7 @@ import (
 	"github.com/may20xx/booking/internal/domain"
 )
 
-type UserStorage interface {
+type UserRepository interface {
 	Insert(user *domain.User) (*domain.User, error)
 	Remove(id int) error
 	FindOneById(id int) (*domain.User, error)
@@ -18,18 +18,19 @@ type UserStorage interface {
 	FindOneByUsername(username string) (*domain.User, error)
 	Update(user *domain.User) (*domain.User, error)
 	VerifyEmail(user *domain.User) (*domain.User, error)
+	FindLandlord(id int) (*domain.Landlord, error)
 }
 
-type UserRepository struct {
+type userRepository struct {
 	db  *sqlx.DB
 	ctx context.Context
 }
 
-func NewUserRepository(db *sqlx.DB, ctx context.Context) *UserRepository {
-	return &UserRepository{db: db, ctx: ctx}
+func NewUserRepository(db *sqlx.DB, ctx context.Context) *userRepository {
+	return &userRepository{db: db, ctx: ctx}
 }
 
-func (r *UserRepository) Insert(user *domain.User) (*domain.User, error) {
+func (r *userRepository) Insert(user *domain.User) (*domain.User, error) {
 	query := `
         INSERT INTO users (username, email, hash_password, first_name, surname, avatar, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -58,7 +59,7 @@ func (r *UserRepository) Insert(user *domain.User) (*domain.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) Update(user *domain.User) (*domain.User, error) {
+func (r *userRepository) Update(user *domain.User) (*domain.User, error) {
 	query := `
 		UPDATE users
 		SET username = $1, email = $2, hash_password = $3, first_name = $4, surname = $5, avatar = $6, updated_at = $7
@@ -87,7 +88,7 @@ func (r *UserRepository) Update(user *domain.User) (*domain.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) VerifyEmail(user *domain.User) (*domain.User, error) {
+func (r *userRepository) VerifyEmail(user *domain.User) (*domain.User, error) {
 	query := `
 		UPDATE users
 		SET email_verify = true , updated_at = $1
@@ -110,7 +111,7 @@ func (r *UserRepository) VerifyEmail(user *domain.User) (*domain.User, error) {
 	return user, nil
 }
 
-func (r *UserRepository) Remove(id int) error {
+func (r *userRepository) Remove(id int) error {
 	query := `
 		DELETE FROM users
 		WHERE id = $1
@@ -125,7 +126,7 @@ func (r *UserRepository) Remove(id int) error {
 	return nil
 }
 
-func (r *UserRepository) FindOneByEmail(email string) (*domain.User, error) {
+func (r *userRepository) FindOneByEmail(email string) (*domain.User, error) {
 	query := `
 		SELECT id, username, email_verify, email, hash_password, first_name, surname, avatar, created_at, updated_at
 		FROM users
@@ -145,7 +146,7 @@ func (r *UserRepository) FindOneByEmail(email string) (*domain.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) FindOneByUsername(username string) (*domain.User, error) {
+func (r *userRepository) FindOneByUsername(username string) (*domain.User, error) {
 	query := `
 		SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at , email_verify
 		FROM users
@@ -165,7 +166,7 @@ func (r *UserRepository) FindOneByUsername(username string) (*domain.User, error
 	return &user, nil
 }
 
-func (r *UserRepository) FindOneById(id int) (*domain.User, error) {
+func (r *userRepository) FindOneById(id int) (*domain.User, error) {
 	query := `
         SELECT id, username, email, hash_password, first_name, surname, avatar, created_at, updated_at , email_verify
         FROM users
@@ -182,4 +183,20 @@ func (r *UserRepository) FindOneById(id int) (*domain.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (r *userRepository) FindLandlord(landlordId int) (*domain.Landlord, error) {
+	query := `
+		SELECT id, username, first_name, surname, email, avatar, created_at FROM users WHERE id = $1
+	`
+
+	landlord := &domain.Landlord{}
+
+	err := r.db.QueryRowxContext(r.ctx, query, landlordId).StructScan(landlord)
+
+	if err != nil {
+		return nil, fmt.Errorf("error querying landlord: %w", err)
+	}
+
+	return landlord, nil
 }

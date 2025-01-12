@@ -3,6 +3,7 @@ package dto
 type ListingRequest struct {
 	Title       string  `json:"title" db:"title"`
 	Description string  `json:"description" db:"description"`
+	Catalogs    []int   `json:"catalogs" db:"-"`
 	Location    string  `json:"location" db:"location"`
 	Guests      int     `json:"guests" db:"guests"`
 	Beds        int     `json:"beds" db:"beds"`

@@ -11,7 +11,7 @@ import (
 )
 
 type ListingRepository interface {
-	FindAll(page int, limit int) ([]*domain.Listing, int, error)
+	FindAll(page int, limit int) ([]*domain.Listing, int, int, error)
 	FindOne(id int) (*domain.Listing, error)
 	Save(listing *domain.Listing) (*domain.Listing, error)
 	Update(id int, listing *domain.Listing) (*domain.Listing, error)
@@ -27,8 +27,34 @@ func NewListingRepository(db *sqlx.DB, ctx context.Context) *listingRepository {
 	return &listingRepository{db: db, ctx: ctx}
 }
 
-func (r *listingRepository) FindAll(page int, limit int) ([]*domain.Listing, int, error) {
-	return nil, 0, nil
+func (r *listingRepository) FindAll(page int, limit int) ([]*domain.Listing, int, int, error) {
+
+	var listings []*domain.Listing
+	var total int
+
+	query := `
+		SELECT id, title, description, location, guests, beds, baths, price, cleaning_fee, service_fee, taxes, landlord_id, created_at, updated_at
+		FROM listings
+		ORDER BY created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	err := r.db.SelectContext(r.ctx, &listings, query, limit, (page-1)*limit)
+
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("error finding listings: %w", err)
+	}
+
+	totalQuery := "SELECT COUNT(*) FROM listings"
+	err = r.db.GetContext(r.ctx, &total, totalQuery)
+
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	totalPage := (total + limit - 1) / limit
+
+	return listings, total, totalPage, nil
 }
 
 func (r *listingRepository) FindOne(id int) (*domain.Listing, error) {
@@ -48,14 +74,6 @@ func (r *listingRepository) FindOne(id int) (*domain.Listing, error) {
 		}
 		return nil, fmt.Errorf("error finding listing: %w", err)
 	}
-
-	landlord, err := r.findLandlord(listing.LandlordID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	listing.Landlord = landlord
 
 	return listing, nil
 }
@@ -90,14 +108,6 @@ func (r *listingRepository) Update(id int, listing *domain.Listing) (*domain.Lis
 		return nil, fmt.Errorf("error updating listing: %w", err)
 	}
 
-	landlord, err := r.findLandlord(listing.LandlordID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	listing.Landlord = landlord
-
 	return listing, err
 }
 
@@ -114,12 +124,6 @@ func (r *listingRepository) Remove(id int) error {
 }
 
 func (r *listingRepository) Save(listing *domain.Listing) (*domain.Listing, error) {
-	tx, err := r.db.Beginx()
-	if err != nil {
-		return nil, fmt.Errorf("error starting transaction: %w", err)
-	}
-	defer tx.Rollback()
-
 	query := `
 		INSERT INTO listings (title, description, location, guests, beds, baths, price, cleaning_fee, service_fee, taxes, landlord_id, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
@@ -130,7 +134,7 @@ func (r *listingRepository) Save(listing *domain.Listing) (*domain.Listing, erro
 	listing.CreatedAt = now
 	listing.UpdatedAt = now
 
-	err = tx.QueryRowxContext(r.ctx, query,
+	err := r.db.QueryRowxContext(r.ctx, query,
 		listing.Title,
 		listing.Description,
 		listing.Location,
@@ -150,33 +154,5 @@ func (r *listingRepository) Save(listing *domain.Listing) (*domain.Listing, erro
 		return nil, fmt.Errorf("error inserting listing: %w", err)
 	}
 
-	landlord, err := r.findLandlord(listing.LandlordID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	listing.Landlord = landlord
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("error committing transaction: %w", err)
-	}
-
 	return listing, nil
-}
-
-func (r *listingRepository) findLandlord(landlordId int) (*domain.Landlord, error) {
-	landlordQuery := `
-		SELECT id, username, first_name, surname, email, avatar, created_at FROM users WHERE id = $1
-	`
-
-	landlord := &domain.Landlord{}
-
-	err := r.db.QueryRowxContext(r.ctx, landlordQuery, landlordId).StructScan(landlord)
-
-	if err != nil {
-		return nil, fmt.Errorf("error querying landlord: %w", err)
-	}
-
-	return landlord, nil
 }

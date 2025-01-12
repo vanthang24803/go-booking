@@ -22,7 +22,7 @@ type AuthService interface {
 }
 
 type authService struct {
-	userRepo  storage.UserStorage
+	userRepo  storage.UserRepository
 	tokenRepo storage.TokenStorage
 	roleRepo  storage.RoleStorage
 	mail      mail.Mail

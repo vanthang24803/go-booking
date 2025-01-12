@@ -8,12 +8,14 @@ import (
 )
 
 type CatalogRepository interface {
-	FindAll(page int, limit int) ([]*domain.Catalog, int, error)
+	FindAll(page int, limit int) ([]*domain.Catalog, int, int, error)
 	FindById(id int) (*domain.Catalog, error)
 	FindByName(name string) (*domain.Catalog, error)
 	Insert(catalog *domain.Catalog) (*domain.Catalog, error)
 	Update(catalog *domain.Catalog) (*domain.Catalog, error)
 	Remove(id int) error
+	InsertCatalogForListing(*domain.CatalogListing) error
+	FindCatalogsByListingId(id int) ([]*domain.Catalog, error)
 }
 
 type catalogRepository struct {
@@ -25,7 +27,7 @@ func NewCatalogRepository(db *sqlx.DB, ctx context.Context) *catalogRepository {
 	return &catalogRepository{db: db, ctx: ctx}
 }
 
-func (r *catalogRepository) FindAll(page int, limit int) ([]*domain.Catalog, int, error) {
+func (r *catalogRepository) FindAll(page int, limit int) ([]*domain.Catalog, int, int, error) {
 	var catalogs []*domain.Catalog
 	var total int
 
@@ -34,16 +36,18 @@ func (r *catalogRepository) FindAll(page int, limit int) ([]*domain.Catalog, int
 	query := "SELECT id, name FROM catalogs  ORDER BY id ASC LIMIT $1 OFFSET $2"
 	err := r.db.SelectContext(r.ctx, &catalogs, query, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
 	totalQuery := "SELECT COUNT(*) FROM catalogs"
 	err = r.db.GetContext(r.ctx, &total, totalQuery)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
 
-	return catalogs, total, nil
+	totalPage := (total + limit - 1) / limit
+
+	return catalogs, total, totalPage, nil
 }
 
 func (r *catalogRepository) FindById(id int) (*domain.Catalog, error) {
@@ -106,4 +110,30 @@ func (r *catalogRepository) Remove(id int) error {
 	}
 
 	return nil
+}
+
+func (r *catalogRepository) InsertCatalogForListing(catalogListing *domain.CatalogListing) error {
+	query := `INSERT INTO catalogs_listings (catalog_id, listing_id) VALUES ($1, $2)`
+
+	_, err := r.db.ExecContext(r.ctx, query, catalogListing.CatalogID, catalogListing.ListingID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *catalogRepository) FindCatalogsByListingId(id int) ([]*domain.Catalog, error) {
+	var catalogs []*domain.Catalog
+
+	query := "SELECT id, name FROM catalogs WHERE id IN (SELECT catalog_id FROM catalogs_listings WHERE listing_id = $1)"
+
+	err := r.db.SelectContext(r.ctx, &catalogs, query, id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return catalogs, nil
 }

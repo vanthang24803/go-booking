@@ -22,7 +22,7 @@ type MeService interface {
 }
 
 type meService struct {
-	userRepo   storage.UserStorage
+	userRepo   storage.UserRepository
 	roleRepo   storage.RoleStorage
 	tokenRepo  storage.TokenStorage
 	cloudinary cloudinary.Cloudinary

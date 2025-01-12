@@ -118,7 +118,16 @@ func (r *listingRouter) remove(c *fiber.Ctx) error {
 }
 
 func (r *listingRouter) findAll(c *fiber.Ctx) error {
-	return nil
+	page := c.Query("page")
+	limit := c.Query("limit")
+
+	result, err := r.service.FindAll(page, limit)
+
+	if err != nil {
+		return c.Status(err.Code).JSON(err)
+	}
+
+	return c.JSON(result)
 }
 
 func ListingRouter(router fiber.Router) {
@@ -194,6 +203,29 @@ func validationFormData(form *multipart.Form) (*dto.ListingRequest, error) {
 		return floatValue, nil
 	}
 
+	convertStrToInt := func(arr []string) ([]int, error) {
+		seen := make(map[int]bool)
+		var result []int
+
+		for i, str := range arr {
+			num, err := strconv.Atoi(str)
+			if err != nil {
+				return nil, fmt.Errorf("error converting string to int at index %d: %w", i, err)
+			}
+			if !seen[num] {
+				seen[num] = true
+				result = append(result, num)
+			}
+		}
+		return result, nil
+	}
+
+	catalogs, err := convertStrToInt(form.Value["catalogs"])
+
+	if err != nil {
+		return &dto.ListingRequest{}, utils.NewAppError(400, "Catalogs is required!")
+	}
+
 	title, ok := getFirstValue("title")
 	if !ok {
 		return &dto.ListingRequest{}, utils.NewAppError(400, "Title is required!")
@@ -255,6 +287,7 @@ func validationFormData(form *multipart.Form) (*dto.ListingRequest, error) {
 		CleaningFee: cleaningFee,
 		ServiceFee:  serviceFee,
 		Taxes:       taxes,
+		Catalogs:    catalogs,
 	}
 
 	return request, nil

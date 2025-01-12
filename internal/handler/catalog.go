@@ -47,12 +47,12 @@ func (s *catalogService) FindAll(page string, limit string) (*utils.Pagination, 
 		limitInt = 20
 	}
 
-	res, total, err := s.catalogRepo.FindAll(pageInt, limitInt)
+	res, total, totalPage, err := s.catalogRepo.FindAll(pageInt, limitInt)
 	if err != nil {
 		return nil, utils.NewAppError(500, "Internal server error")
 	}
 
-	return utils.NewPaginationResponse(total, pageInt, limitInt, res), nil
+	return utils.NewPaginationResponse(total, totalPage, pageInt, limitInt, res), nil
 }
 
 func (s *catalogService) FindById(id string) (*utils.Response, *utils.AppError) {
