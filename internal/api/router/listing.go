@@ -130,10 +130,25 @@ func (r *listingRouter) findAll(c *fiber.Ctx) error {
 	return c.JSON(result)
 }
 
+func (r *listingRouter) searchByLocation(c *fiber.Ctx) error {
+	query := c.Query("s")
+	page := c.Query("page")
+	limit := c.Query("limit")
+
+	res, err := r.service.Search(page, limit, query)
+
+	if err != nil {
+		return c.Status(err.Code).JSON(err)
+	}
+
+	return c.JSON(res)
+}
+
 func ListingRouter(router fiber.Router) {
 	routes := newListingRouter()
 
 	router.Get("/listings", newListingRouter().findAll)
+	router.Get("/search", newListingRouter().searchByLocation)
 	router.Get("/listings/:id", newListingRouter().findDetail)
 	router.Post("/listings", guard.AuthGuard(), routes.save)
 	router.Put("/listings/:id", guard.AuthGuard(), newListingRouter().update)

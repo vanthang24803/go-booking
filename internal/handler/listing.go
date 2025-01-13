@@ -21,6 +21,7 @@ type ListingService interface {
 	Save(payload *utils.JwtPayload, req *dto.ListingRequest, files []multipart.File) (*utils.Response, error)
 	Update(id string, req *dto.ListingRequest) (*utils.Response, *utils.AppError)
 	Remove(id string) (*utils.Response, *utils.AppError)
+	Search(page string, limit string, query string) (*utils.Pagination, *utils.AppError)
 }
 
 type listingService struct {
@@ -54,7 +55,7 @@ func NewListingService() ListingService {
 	}
 }
 
-func (s *listingService) FindAll(page string, limit string) (*utils.Pagination, *utils.AppError) {
+func (s *listingService) Search(page string, limit string, query string) (*utils.Pagination, *utils.AppError) {
 	pageInt, err := strconv.Atoi(page)
 	if err != nil || pageInt <= 0 {
 		pageInt = 1
@@ -65,7 +66,46 @@ func (s *listingService) FindAll(page string, limit string) (*utils.Pagination, 
 		limitInt = 20
 	}
 
-	log.Msg.Debug(pageInt, limitInt)
+	listings, totalItems, totalPage, err := s.listingRepo.SearchByLocation(pageInt, limitInt, query)
+
+	if err != nil {
+		return nil, utils.NewAppError(500, err.Error())
+	}
+
+	for _, listing := range listings {
+
+		landlord, err := s.userRepo.FindLandlord(listing.LandlordID)
+
+		if err != nil {
+			return nil, utils.NewAppError(500, err.Error())
+		}
+
+		listing.Landlord = landlord
+
+		photos, err := s.photoRepo.FindAllForListing(listing.ID)
+
+		if err != nil {
+			return nil, utils.NewAppError(500, err.Error())
+		}
+
+		listing.Photos = photos
+	}
+
+	res := utils.NewPaginationResponse(totalItems, totalPage, pageInt, limitInt, listings)
+
+	return res, nil
+}
+
+func (s *listingService) FindAll(page string, limit string) (*utils.Pagination, *utils.AppError) {
+	pageInt, err := strconv.Atoi(page)
+	if err != nil || pageInt <= 0 {
+		pageInt = 1
+	}
+
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil || limitInt <= 0 {
+		limitInt = 20
+	}
 
 	listings, totalItems, totalPage, err := s.listingRepo.FindAll(pageInt, limitInt)
 

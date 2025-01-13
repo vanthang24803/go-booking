@@ -16,6 +16,7 @@ type ListingRepository interface {
 	Save(listing *domain.Listing) (*domain.Listing, error)
 	Update(id int, listing *domain.Listing) (*domain.Listing, error)
 	Remove(id int) error
+	SearchByLocation(page int, limit int, location string) ([]*domain.Listing, int, int, error)
 }
 
 type listingRepository struct {
@@ -155,4 +156,36 @@ func (r *listingRepository) Save(listing *domain.Listing) (*domain.Listing, erro
 	}
 
 	return listing, nil
+}
+
+func (r *listingRepository) SearchByLocation(page int, limit int, location string) ([]*domain.Listing, int, int, error) {
+	var listings []*domain.Listing
+	var total int
+
+	query := `
+        SELECT id, title, description, location, guests, beds, baths, price, cleaning_fee, service_fee, taxes, landlord_id, created_at, updated_at
+        FROM listings
+        WHERE location LIKE '%' || $1 || '%'
+        ORDER BY created_at DESC
+        LIMIT $2 OFFSET $3
+    `
+
+	err := r.db.SelectContext(r.ctx, &listings, query, location, limit, (page-1)*limit)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("error finding listings: %w", err)
+	}
+
+	totalQuery := `
+        SELECT COUNT(*)
+        FROM listings
+        WHERE location LIKE '%' || $1 || '%'
+    `
+	err = r.db.GetContext(r.ctx, &total, totalQuery, location)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("error counting listings: %w", err)
+	}
+
+	totalPage := (total + limit - 1) / limit
+
+	return listings, total, totalPage, nil
 }
